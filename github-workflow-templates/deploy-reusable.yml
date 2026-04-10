@@ -1,0 +1,91 @@
+name: Reusable Deploy ASP.Net Core to Azure Web App
+
+on:
+  workflow_call:
+    inputs:
+      environment-name:
+        description: 'Nombre del ambiente (Development, PreProduction, Production)'
+        required: true
+        type: string
+      app-name:
+        description: 'Nombre de la Azure Web App'
+        required: true
+        type: string
+      build-definition:
+        description: 'Build_DefinitionName para Angular (BackOfficeDEVL, BackOfficePPRD, BackOfficePROD)'
+        required: true
+        type: string
+      settings-var:
+        description: 'Contenido de appsettings.json (pasar la variable del ambiente)'
+        required: true
+        type: string
+      verify-url:
+        description: 'URL para smoke test post-deploy (opcional)'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      publish-profile:
+        description: 'Azure publish profile para el ambiente'
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      Build_DefinitionName: ${{ inputs.build-definition }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Write appsettings.json
+        run: echo '${{ inputs.settings-var }}' > appsettings.json
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish -c Release -o ${{ env.DOTNET_ROOT }}/myapp --no-build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: .net-app
+          path: ${{ env.DOTNET_ROOT }}/myapp
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: ${{ inputs.environment-name }}
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: .net-app
+
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ inputs.app-name }}
+          slot-name: 'Production'
+          publish-profile: ${{ secrets.publish-profile }}
+          package: .
+          clean: true
+          restart: true
+
+      - name: Verify deployment
+        if: inputs.verify-url != ''
+        run: |
+          echo "Esperando que la app inicie..."
+          sleep 30
+          curl -f ${{ inputs.verify-url }}/Health || echo "App might still be starting"

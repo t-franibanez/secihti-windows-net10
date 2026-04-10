@@ -1,0 +1,17 @@
+name: Deploy - DEVL
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-reusable.yml
+    with:
+      environment-name: 'Development'
+      app-name: 'TU_APP_DEVL'
+      build-definition: 'BackOfficeDEVL'
+      settings-var: ${{ vars.DEVL_JSON }}
+    secrets:
+      publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_DEVL }}

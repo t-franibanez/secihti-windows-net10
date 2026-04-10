@@ -1,0 +1,32 @@
+services:
+  secihti_web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: secihti_web_dev
+    container_name: secihti_web_net10
+    env_file:
+      - .env
+    ports:
+      - "5011:5001"
+      - "5010:5000"
+      - "4210:4200"
+    volumes:
+      - .:/app
+      - /app/ClientApp/node_modules
+      - /app/bin
+      - /app/ClientApp/.angular/cache
+      - dataprotection-keys:/root/.aspnet/DataProtection-Keys
+    working_dir: /app
+    command: bash -c "dotnet dev-certs https  && dotnet watch run"
+    stdin_open: true
+    tty: true
+    networks:
+      - secihti_net
+
+volumes:
+  dataprotection-keys:
+
+networks:
+  secihti_net:
+    name: secihti_net

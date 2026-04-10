@@ -1,0 +1,90 @@
+name: Build and deploy ASP.Net Core app to Azure Web App - secihti
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Set up .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.x"
+
+      - name: Inject Configuration (DEVL_JSON)
+        shell: pwsh
+        env:
+          DEVL_JSON_CONTENT: ${{ vars.DEVL_JSON }}
+        run: |
+          if ($env:DEVL_JSON_CONTENT) {
+            $env:DEVL_JSON_CONTENT | Out-File -FilePath appsettings.json -Encoding utf8
+          } else {
+            Write-Host "La variable DEVL_JSON está vacía."
+          }
+
+      - name: Build with dotnet
+        run: dotnet build --configuration Release
+        env:
+          Build_DefinitionName: "BackOfficeDEVL"
+
+      - name: dotnet publish
+        run: dotnet publish -c Release -o ${{ github.workspace }}/publish
+        env:
+          Build_DefinitionName: "BackOfficeDEVL"
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: .net-app
+          path: ${{ github.workspace }}/publish
+
+  deploy:
+    runs-on: windows-latest
+    needs: build
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: .net-app
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_C8FCEF52786346FEA7675A6579694E2F }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_896176526B734CAB99D11B7E5B8F5F01 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_75E8081EC6784549AEC440A3108050B1 }}
+
+      - name: Enable clean deploy (Run From Package)
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            RG=$(az webapp list --query "[?name=='secihti'].resourceGroup" -o tsv)
+            az webapp config appsettings set -g $RG -n secihti --settings WEBSITE_RUN_FROM_PACKAGE=1
+            echo "Esperando 30 segundos a que Kudu se reinicie para evitar colisiones..."
+            sleep 30
+
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: "secihti"
+          slot-name: "Production"
+          package: .

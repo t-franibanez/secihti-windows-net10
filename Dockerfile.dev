@@ -1,0 +1,20 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS secihti_web_dev
+
+# Instala Node.js y Angular CLI
+RUN apt-get update && \
+    apt-get install -y curl gnupg && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    npm install -g @angular/cli
+
+# Crea carpeta de trabajo
+WORKDIR /app
+    
+COPY . .
+
+# Restaura dependencias de .NET y Angular
+RUN dotnet restore
+RUN npm install --prefix ClientApp
+
+# Abre bash por defecto (para uso interactivo manual)
+CMD [ "bash" ]
