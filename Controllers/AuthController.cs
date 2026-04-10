@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using ITfoxtec.Identity.Saml2;
 using ITfoxtec.Identity.Saml2.MvcCore;
 using ITfoxtec.Identity.Saml2.Schemas;
@@ -72,7 +71,7 @@ namespace SECIHTI.Controllers
                 binding.Unbind(Request.ToGenericHttpRequest(), saml2AuthnResponse);
 
                 await saml2AuthnResponse.CreateSession(HttpContext,
-                    claimsTransform: (claimsPrincipal) => ClaimsTransform.Transform(claimsPrincipal));
+                    claimsTransform: claimsPrincipal => claimsPrincipal);
 
                 var relayStateQuery = binding.GetRelayStateQuery();
                 var returnUrl = relayStateQuery.ContainsKey("ReturnUrl")
@@ -141,17 +140,4 @@ namespace SECIHTI.Controllers
         }
     }
 
-    /// <summary>
-    /// Transforma los claims recibidos del IdP SAML antes de crear la sesión.
-    /// Útil para mapear claims, agregar roles personalizados, etc.
-    /// </summary>
-    public static class ClaimsTransform
-    {
-        public static ClaimsPrincipal Transform(ClaimsPrincipal claimsPrincipal)
-        {
-            // Los claims llegan tal cual del IdP.
-            // Agrega lógica de transformación aquí si es necesario.
-            return claimsPrincipal;
-        }
-    }
 }

@@ -17,6 +17,11 @@ var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 var services = builder.Services;
 
+// ── Serilog ──
+Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(configuration).CreateLogger();
+builder.Host.UseSerilog();
+Serilog.Debugging.SelfLog.Enable(msg => Debug.Print(msg));
+
 // ── Azure Key Vault ──
 if (!builder.Environment.IsDevelopment())
 {
@@ -26,38 +31,28 @@ if (!builder.Environment.IsDevelopment())
         try
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            Console.WriteLine($"[KeyVault] Conectando a {keyVaultUri}...");
+            Log.Information("[KeyVault] Conectando a {KeyVaultUri}...", keyVaultUri);
 
             var credential = new ManagedIdentityCredential();
             configuration.AddAzureKeyVault(new Uri(keyVaultUri), credential);
 
             sw.Stop();
-            Console.WriteLine($"[KeyVault] Conectado en {sw.Elapsed.TotalSeconds:F1}s");
+            Log.Information("[KeyVault] Conectado en {ElapsedSeconds:F1}s", sw.Elapsed.TotalSeconds);
 
-            // Log de diagnóstico: muestra qué claves se cargaron (sin valores)
             var connStr = configuration.GetConnectionString("AzureSql");
-            Console.WriteLine($"[KeyVault] ConnectionStrings:AzureSql = {(string.IsNullOrEmpty(connStr) ? "❌ NO ENCONTRADA" : $"✅ Cargada ({connStr.Length} chars)")}");
+            Log.Information("[KeyVault] ConnectionStrings:AzureSql = {Status}",
+                string.IsNullOrEmpty(connStr) ? "NO ENCONTRADA" : $"Cargada ({connStr.Length} chars)");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[KeyVault] ❌ Error conectando a {keyVaultUri}: {ex.Message}");
-            // La app continúa con lo que tenga en appsettings.json
+            Log.Error(ex, "[KeyVault] Error conectando a {KeyVaultUri}", keyVaultUri);
         }
     }
     else
     {
-        Console.WriteLine("[KeyVault] ⚠️ KeyVaultUri está vacío, saltando Key Vault.");
+        Log.Warning("[KeyVault] KeyVaultUri está vacío, saltando Key Vault.");
     }
 }
-
-// ── Serilog ──
-Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(configuration).CreateLogger();
-builder.Host.UseSerilog();
-Serilog.Debugging.SelfLog.Enable(msg =>
-{
-    Debug.Print(msg);
-    Debugger.Break();
-});
 
 // ── Services ──
 var bypassSaml = configuration.GetValue<bool>("Auth:BypassSaml");
@@ -101,7 +96,7 @@ if (!bypassSaml)
         }
         catch (Exception e)
         {
-            Log.Error(e, e.Message);
+            Log.Error(e, "Error configurando SAML2");
             throw;
         }
     });
@@ -115,6 +110,7 @@ else
 }
 
 services.AddHttpContextAccessor();
+services.AddScoped<AuthHelper>();
 services.AddControllersWithViews();
 
 services.AddDistributedMemoryCache();
@@ -123,6 +119,8 @@ services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Strict;
 });
 
 services.AddCors(options =>
@@ -142,7 +140,7 @@ services.AddCors(options =>
 // ── App ──
 var app = builder.Build();
 
-IdentityModelEventSource.ShowPII = true;
+IdentityModelEventSource.ShowPII = app.Environment.IsDevelopment();
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
@@ -158,9 +156,6 @@ else
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
-if (!app.Environment.IsDevelopment())
-    app.UseStaticFiles();
 
 app.UseRouting();
 app.UseSession();

@@ -1,9 +1,6 @@
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
-using Serilog;
-using System;
-using System.Linq;
+using Microsoft.Extensions.Logging;
 using SECIHTI.Models.Common;
 
 namespace SECIHTI.Common
@@ -12,11 +9,13 @@ namespace SECIHTI.Common
     {
         private readonly IConfiguration _config;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ILogger<AuthHelper> _logger;
 
-        public AuthHelper(IConfiguration configuration, IWebHostEnvironment environment, IHttpContextAccessor httpContextAccessor)
+        public AuthHelper(IConfiguration configuration, IHttpContextAccessor httpContextAccessor, ILogger<AuthHelper> logger)
         {
             _config = configuration;
             _httpContextAccessor = httpContextAccessor;
+            _logger = logger;
         }
 
         public UserClaims GetClaims()
@@ -52,7 +51,7 @@ namespace SECIHTI.Common
             }
             catch (Exception e)
             {
-                Log.Error(e, "Error en AuthHelper.GetClaims()");
+                _logger.LogError(e, "Error en AuthHelper.GetClaims()");
             }
 
             return userClaims;

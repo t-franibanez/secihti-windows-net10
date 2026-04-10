@@ -12,10 +12,12 @@ namespace SECIHTI.Controllers
     public class HealthController : ControllerBase
     {
         private readonly IConfiguration _configuration;
+        private readonly IWebHostEnvironment _environment;
 
-        public HealthController(IConfiguration configuration)
+        public HealthController(IConfiguration configuration, IWebHostEnvironment environment)
         {
             _configuration = configuration;
+            _environment = environment;
         }
 
         /// <summary>
@@ -44,6 +46,9 @@ namespace SECIHTI.Controllers
         [HttpGet("deep")]
         public async Task<IActionResult> Deep()
         {
+            if (_environment.IsProduction())
+                return NotFound();
+
             var result = new Dictionary<string, object>
             {
                 ["timestamp"] = DateTime.UtcNow,

@@ -1,9 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using SECIHTI.Common;
 using SECIHTI.Models.Common;
 
@@ -15,19 +12,17 @@ namespace SECIHTI.Controllers
     [EnableCors("AllowedOrigins")]
     public class HomeController : ControllerBase
     {
-        private readonly AuthHelper AuthHelper;
-        private readonly IConfiguration Configuration;
+        private readonly AuthHelper _authHelper;
 
-        public HomeController(IConfiguration configuration, IWebHostEnvironment environment, IHttpContextAccessor httpContextAccessor)
+        public HomeController(AuthHelper authHelper)
         {
-            AuthHelper = new AuthHelper(configuration, environment, httpContextAccessor);
-            Configuration = configuration;
+            _authHelper = authHelper;
         }
 
         [HttpGet]
         public Response<UserClaims> GetUserClaims()
         {
-            UserClaims userProfile = AuthHelper.GetClaims();
+            var userProfile = _authHelper.GetClaims();
             return new Response<UserClaims>(userProfile);
         }
     }
