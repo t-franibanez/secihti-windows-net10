@@ -1,4 +1,4 @@
-name: Build and deploy ASP.Net Core app to Azure Web App - secihti
+name: Build and deploy ASP.Net Core app to Azure Web App - secihti-devl-windows
 
 on:
   push:
@@ -67,7 +67,7 @@ jobs:
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: "secihti"
+          app-name: "secihti-devl-windows"
           slot-name: "Production"
           publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
           package: .
