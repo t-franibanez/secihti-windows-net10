@@ -8,7 +8,7 @@ using ITfoxtec.Identity.Saml2.MvcCore.Configuration;
 using ITfoxtec.Identity.Saml2.Schemas;
 using ITfoxtec.Identity.Saml2.Schemas.Metadata;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Http.Extensions;
+
 using Microsoft.IdentityModel.Logging;
 using SECIHTI.Common;
 using Serilog;
@@ -160,12 +160,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 if (!app.Environment.IsDevelopment())
-    app.UseStaticFiles(new StaticFileOptions
-    {
-        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-            Path.Combine(builder.Environment.ContentRootPath, "ClientApp", "dist", "browser")),
-        RequestPath = ""
-    });
+    app.UseStaticFiles();
 
 app.UseRouting();
 app.UseSession();
@@ -250,8 +245,7 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    // Fallback: cualquier ruta no-API sirve index.html (SPA routing)
-    app.MapFallbackToFile("ClientApp/dist/browser/index.html");
+    app.MapFallbackToFile("index.html");
 }
 
 app.Run();

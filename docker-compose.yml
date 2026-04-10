@@ -18,7 +18,7 @@ services:
       - /app/ClientApp/.angular/cache
       - dataprotection-keys:/root/.aspnet/DataProtection-Keys
     working_dir: /app
-    command: bash -c "dotnet dev-certs https  && dotnet watch run"
+    command: bash -c "cd ClientApp && ng serve --host 0.0.0.0 --port 4200 & cd /app && dotnet dev-certs https && dotnet watch run"
     stdin_open: true
     tty: true
     networks:

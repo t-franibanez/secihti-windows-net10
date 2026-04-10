@@ -81,12 +81,13 @@
     <!-- 3. (Opcional) build para SSR -->
     <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build:ssr" Condition=" '$(BuildServerSideRenderer)' == 'true' " />
 
-      <!-- Include the newly-built files in the publish output -->
+      <!-- Publica los archivos de Angular en wwwroot/ -->
     <ItemGroup>
-      <DistFiles Include="$(SpaRoot)dist\**; $(SpaRoot)dist-server\**" />
+      <DistFiles Include="$(SpaRoot)dist\browser\**" />
+      <DistFiles Include="$(SpaRoot)dist-server\**" Condition="'$(BuildServerSideRenderer)' == 'true'" />
       <DistFiles Include="$(SpaRoot)node_modules\**" Condition="'$(BuildServerSideRenderer)' == 'true'" />
       <ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
-        <RelativePath>%(DistFiles.Identity)</RelativePath>
+        <RelativePath>wwwroot\%(RecursiveDir)%(FileName)%(Extension)</RelativePath>
         <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
         <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       </ResolvedFileToPublish>
